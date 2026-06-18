@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Игра - Събиране</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        h1 {
+            color: white;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        #gameCanvas {
+            border: 3px solid white;
+            background: linear-gradient(to bottom, #87CEEB, #E0F6FF);
+            display: block;
+            margin: 0 auto 20px;
+            cursor: none;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .stats {
+            color: white;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+
+        .score {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 20px;
+            border-radius: 5px;
+            display: inline-block;
+            margin: 0 10px;
+        }
+
+        .controls {
+            color: white;
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+
+        .game-over {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 1000;
+        }
+
+        .game-over h2 {
+            font-size: 2em;
+            margin-bottom: 20px;
+            color: #FFD700;
+        }
+
+        .game-over p {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+
+        .game-over button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 30px;
+            font-size: 1em;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 10px;
+        }
+
+        .game-over button:hover {
+            background: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 СЪБИРАНЕ</h1>
+        <div class="stats">
+            <div class="score">Точки: <span id="score">0</span></div>
+            <div class="score">Живот: <span id="health">3</span></div>
+        </div>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div class="controls">
+            <p>⬅️ ➡️ Придвижване | ПРОСТРАНСТВО или клик - Изстрелване</p>
+        </div>
+    </div>
+
+    <div class="game-over" id="gameOverScreen">
+        <h2>КРАЙ НА ИГРАТА!</h2>
+        <p>Твоят резултат: <span id="finalScore">0</span> точки</p>
+        <button onclick="location.reload()">Повторение</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Играч
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height - 50,
+            width: 40,
+            height: 40,
+            speed: 5,
+            color: '#FF6B6B'
+        };
+
+        // Събираеми предмети
+        let items = [];
+        let bullets = [];
+        let score = 0;
+        let health = 3;
+        let gameRunning = true;
+
+        // Управление
+        const keys = {};
+        window.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+            if (e.key === ' ') shoot();
+        });
+        window.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        canvas.addEventListener('click', () => {
+            if (gameRunning) shoot();
+        });
+
+        // Стрелба
+        function shoot() {
+            bullets.push({
+                x: player.x + player.width / 2 - 2,
+                y: player.y,
+                width: 4,
+                height: 10,
+                speed: 7,
+                color: '#FFD700'
+            });
+        }
+
+        // Създаване на предмет
+        function createItem() {
+            items.push({
+                x: Math.random() * (canvas.width - 30),
+                y: -30,
+                width: 30,
+                height: 30,
+                speed: 2,
+                color: '#4ECDC4'
+            });
+        }
+
+        // Создавание на враг (паднал предмет)
+        function createEnemy() {
+            items.push({
+                x: Math.random() * (canvas.width - 30),
+                y: -30,
+                width: 30,
+                height: 30,
+                speed: 3,
+                color: '#FF6348',
+                isEnemy: true
+            });
+        }
+
+        // Рисуване
+        function draw() {
+            // Фон
+            ctx.fillStyle = 'rgba(135, 206, 235, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Играч
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            ctx.fillStyle = 'white';
+            ctx.fillRect(player.x + 5, player.y + 5, 8, 8);
+            ctx.fillRect(player.x + 27, player.y + 5, 8, 8);
+
+            // Предмети
+            items.forEach((item, index) => {
+                ctx.fillStyle = item.color;
+                ctx.beginPath();
+                ctx.arc(item.x + item.width / 2, item.y + item.height / 2, item.width / 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (item.isEnemy) {
+                    ctx.strokeStyle = '#FF0000';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            });
+
+            // Куршуми
+            bullets.forEach((bullet) => {
+                ctx.fillStyle = bullet.color;
+                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            });
+        }
+
+        // Обновяване
+        function update() {
+            if (!gameRunning) return;
+
+            // Движение на играча
+            if (keys['ArrowLeft'] || keys['a']) player.x -= player.speed;
+            if (keys['ArrowRight'] || keys['d']) player.x += player.speed;
+
+            // Границите на екрана
+            if (player.x < 0) player.x = 0;
+            if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+
+            // Движение на предметите
+            items.forEach((item, index) => {
+                item.y += item.speed;
+
+                // Колизия със играча
+                if (
+                    player.x < item.x + item.width &&
+                    player.x + player.width > item.x &&
+                    player.y < item.y + item.height &&
+                    player.y + player.height > item.y
+                ) {
+                    if (item.isEnemy) {
+                        health--;
+                        document.getElementById('health').textContent = health;
+                        if (health <= 0) endGame();
+                    } else {
+                        score += 10;
+                        document.getElementById('score').textContent = score;
+                    }
+                    items.splice(index, 1);
+                }
+
+                // Отстраняване на преминали предмети
+                if (item.y > canvas.height) {
+                    items.splice(index, 1);
+                }
+            });
+
+            // Движение на куршумите
+            bullets.forEach((bullet, bIndex) => {
+                bullet.y -= bullet.speed;
+
+                // Проверка за колизия с предмети
+                items.forEach((item, iIndex) => {
+                    if (
+                        bullet.x < item.x + item.width &&
+                        bullet.x + bullet.width > item.x &&
+                        bullet.y < item.y + item.height &&
+                        bullet.y + bullet.height > item.y
+                    ) {
+                        if (item.isEnemy) {
+                            score += 50;
+                            document.getElementById('score').textContent = score;
+                        } else {
+                            score += 5;
+                            document.getElementById('score').textContent = score;
+                        }
+                        items.splice(iIndex, 1);
+                        bullets.splice(bIndex, 1);
+                    }
+                });
+
+                // Отстраняване на куршуми вън от екрана
+                if (bullet.y < 0) {
+                    bullets.splice(bIndex, 1);
+                }
+            });
+        }
+
+        // Брой на спавненето на предмети
+        let spawnCounter = 0;
+        function spawn() {
+            spawnCounter++;
+            if (spawnCounter % 30 === 0) {
+                if (Math.random() > 0.3) {
+                    createItem();
+                } else {
+                    createEnemy();
+                }
+            }
+        }
+
+        function endGame() {
+            gameRunning = false;
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOverScreen').style.display = 'block';
+        }
+
+        // Основен цикъл
+        function gameLoop() {
+            update();
+            spawn();
+            draw();
+            if (gameRunning) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        // Начало
+        gameLoop();
+    </script>
+</body>
+</html>
